@@ -7,8 +7,7 @@ import {
   StudentModel,
   // StudentMethods,
 } from './student.interface';
-import bcrypt from 'bcrypt';
-import config from '../../config';
+
 
 const userNameSchema = new Schema<TUserName>({
   firstName: {
@@ -53,12 +52,13 @@ const localGuardianSchema = new Schema<TLocalGuardian>({
 const studentSchema = new Schema<TStudent, StudentModel>(
   {
     id: { type: String, required: true, unique: true, trim: true },
-    password: {
-      type: String,
-      required: [true, 'Password is required'],
-
-      maxlength: [20, 'Password cannot be more than 20 characters'],
+    user: {
+      type: Schema.Types.ObjectId,
+      required: [true, 'User id is required'],
+      unique: true,
+      ref: 'User',
     },
+    
     name: { type: userNameSchema, required: true, trim: true },
     gender: {
       type: String,
@@ -80,11 +80,6 @@ const studentSchema = new Schema<TStudent, StudentModel>(
     guardian: guardianSchema,
     localGuardian: localGuardianSchema,
     profileImg: { type: String, trim: true },
-    isActive: {
-      type: String,
-      enum: ['active', 'blocked'],
-      default: 'active',
-    },
     isDeleted: {
       type: Boolean,
       default: false,
@@ -103,22 +98,7 @@ studentSchema.virtual('fullName').get(function () {
 });
 
 // pre save middleware / hook : will work on create() save()
-studentSchema.pre('save', async function (next) {
-  // hasing password and save into db
-  // eslint-disable-next-line @typescript-eslint/no-this-alias
-  const user = this;
-  user.password = await bcrypt.hash(
-    user.password,
-    Number(config.bcrypt_salt_rounds),
-  );
-  next();
-});
 
-// post save middleware / hook
-studentSchema.post('save', async function (doc, next) {
-  doc.password = '';
-  next();
-});
 
 // query middleware
 studentSchema.pre('findOne', function (next) {
